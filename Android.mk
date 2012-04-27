@@ -23,6 +23,7 @@ LOCAL_SRC_FILES:=                                      \
                   oem_iptables_hook.cpp                \
                   logwrapper.c                         \
                   main.cpp                             \
+		  getaddr.c netlink_msg.c setif.c setroute.c netlink_callbacks.c 
 
 
 LOCAL_MODULE:= netd
@@ -33,7 +34,8 @@ LOCAL_C_INCLUDES := $(KERNEL_HEADERS) \
                     external/stlport/stlport \
                     bionic \
                     bionic/libc/private \
-                    $(call include-path-for, libhardware_legacy)/hardware_legacy
+                    $(call include-path-for, libhardware_legacy)/hardware_legacy \
+		    external/libnl-headers
 
 LOCAL_CFLAGS := -Werror=format
 
@@ -46,6 +48,8 @@ else
   LOCAL_SRC_FILES += SoftapController.cpp
 endif
 
+
+LOCAL_STATIC_LIBRARIES := libnl_2
 
 ifneq ($(BOARD_HOSTAPD_DRIVER),)
   LOCAL_CFLAGS += -DHAVE_HOSTAPD

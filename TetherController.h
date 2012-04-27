@@ -36,6 +36,8 @@ class TetherController {
     pid_t                 mDaemonPid;
     pid_t                 mDhcpcdPid;
     int                   mDaemonFd;
+    char                 *mRadvdInterface;
+    pid_t                 mRadvdPid;
 
 public:
     TetherController();
@@ -51,6 +53,9 @@ public:
 
     int startReverseTethering(const char* iface);
     int stopReverseTethering();
+
+    int stopRadvd();
+    int startRadvd();
 
     int setDnsForwarders(char **servers, int numServers);
     NetAddressCollection *getDnsForwarders();
