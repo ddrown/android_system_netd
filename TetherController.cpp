@@ -31,13 +31,23 @@
 #include <cutils/log.h>
 #include <cutils/properties.h>
 
+#include <sys/system_properties.h>
+
 #include "TetherController.h"
+
+extern "C" {
+  #include "getaddr.h"
+  #include "setif.h"
+  #include "setroute.h"
+}
 
 TetherController::TetherController() {
     mInterfaces = new InterfaceCollection();
     mDnsForwarders = new NetAddressCollection();
     mDaemonFd = -1;
     mDaemonPid = 0;
+    mRadvdPid = 0;
+    mRadvdInterface = NULL;
 }
 
 TetherController::~TetherController() {
@@ -49,6 +59,9 @@ TetherController::~TetherController() {
     mInterfaces->clear();
 
     mDnsForwarders->clear();
+
+    if(mRadvdInterface) 
+        free(mRadvdInterface);
 }
 
 int TetherController::setIpFwdEnabled(bool enable) {
@@ -234,13 +247,94 @@ NetAddressCollection *TetherController::getDnsForwarders() {
     return mDnsForwarders;
 }
 
+int TetherController::startRadvd() {
+    if(mRadvdPid != 0) {
+        LOGE("radvd already started");
+        return -EBUSY;
+    }
+
+    pid_t pid;
+    union anyip *ip;
+    char default_pdp_interface[PROP_VALUE_MAX];
+    char prefix[INET6_ADDRSTRLEN];
+    FILE *radvd_conf;
+
+    if(!__system_property_get("gsm.defaultpdpcontext.interface",default_pdp_interface)) {
+        LOGE("gsm.defaultpdpcontext.interface not set");
+        return -1;
+    }
+    ip = getinterface_ip(default_pdp_interface, AF_INET6);
+    if(ip) {
+        inet_ntop(AF_INET6, &ip->ip6, prefix, sizeof(prefix));
+    } else {
+        LOGE("getinterface_ip(%s) failed", default_pdp_interface);
+        return -1;
+    }
+
+    add_address(mRadvdInterface, AF_INET6, &ip->ip6, 64, NULL);
+
+    radvd_conf = fopen("/data/misc/radvd/radvd.conf","w");
+    if(!radvd_conf) {
+        LOGE("failed to write /data/misc/radvd/radvd.conf (%s)", strerror(errno));
+        return -errno;
+    }
+    chmod("/data/misc/radvd/radvd.conf", 0644);
+    fprintf(radvd_conf,"interface %s\n{\nAdvSendAdvert on;\nMinRtrAdvInterval 30;\nMaxRtrAdvInterval 100;\nprefix %s/64\n{\nAdvOnLink on;\nAdvAutonomous on;\nAdvRouterAddr off;\n};\n};\n",mRadvdInterface, prefix);
+    fclose(radvd_conf);
+    unlink("/data/misc/radvd/radvd.pid");
+
+    if((pid = fork()) < 0) {
+        LOGE("fork failed (%s)", strerror(errno));
+        return -errno;
+    }
+
+    if (!pid) {
+        if (execl("/system/bin/radvd", "radvd", "-C", "/data/misc/radvd/radvd.conf", "-n", "-p", "/data/misc/radvd/radvd.pid", (char *)NULL)) {
+            LOGE("execl failed (%s)", strerror(errno));
+        }
+        LOGE("Should never get here!");
+        exit(0);
+    } else {
+        mRadvdPid = pid;
+    }
+
+    return 0;
+}
+
+int TetherController::stopRadvd() {
+    if(mRadvdInterface == NULL) {
+        LOGE("radvd already stopped: no interface");
+        return -1;
+    }
+    if(mRadvdPid == 0) {
+        LOGE("radvd already stopped: no pid");
+        return -1;
+    }
+    free(mRadvdInterface);
+    mRadvdInterface = NULL;
+
+    kill(mRadvdPid, SIGTERM);
+    waitpid(mRadvdPid, NULL, 0);
+    mRadvdPid = 0;
+
+    return 0;
+}
+
 int TetherController::tetherInterface(const char *interface) {
     mInterfaces->push_back(strdup(interface));
+    if(mRadvdPid == 0) {
+        mRadvdInterface = strdup(interface);
+        this->startRadvd();
+    }
     return 0;
 }
 
 int TetherController::untetherInterface(const char *interface) {
     InterfaceCollection::iterator it;
+
+    if(mRadvdPid > 0 && !strcmp(interface, mRadvdInterface)) {
+        this->stopRadvd();
+    }
 
     for (it = mInterfaces->begin(); it != mInterfaces->end(); ++it) {
         if (!strcmp(interface, *it)) {
