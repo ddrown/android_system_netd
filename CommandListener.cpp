@@ -48,6 +48,7 @@ SoftapController *CommandListener::sSoftapCtrl = NULL;
 BandwidthController * CommandListener::sBandwidthCtrl = NULL;
 ResolverController *CommandListener::sResolverCtrl = NULL;
 SecondaryTableController *CommandListener::sSecondaryTableCtrl = NULL;
+ClatdController *CommandListener::sClatdCtrl = NULL;
 
 CommandListener::CommandListener() :
                  FrameworkListener("netd") {
@@ -61,6 +62,7 @@ CommandListener::CommandListener() :
     registerCmd(new SoftapCmd());
     registerCmd(new BandwidthControlCmd());
     registerCmd(new ResolverCmd());
+    registerCmd(new ClatdCmd());
 
     if (!sSecondaryTableCtrl)
         sSecondaryTableCtrl = new SecondaryTableController();
@@ -78,6 +80,8 @@ CommandListener::CommandListener() :
         sBandwidthCtrl = new BandwidthController();
     if (!sResolverCtrl)
         sResolverCtrl = new ResolverController();
+    if (!sClatdCtrl)
+        sClatdCtrl = new ClatdController();
 }
 
 CommandListener::InterfaceCmd::InterfaceCmd() :
@@ -1175,5 +1179,47 @@ int CommandListener::BandwidthControlCmd::runCommand(SocketClient *cli, int argc
     }
 
     cli->sendMsg(ResponseCode::CommandSyntaxError, "Unknown bandwidth cmd", false);
+    return 0;
+}
+
+CommandListener::ClatdCmd::ClatdCmd() : NetdCommand("clatd") {
+}
+
+int CommandListener::ClatdCmd::runCommand(SocketClient *cli, int argc,
+                                                            char **argv) {
+    int rc = 0;
+
+    if (argc < 2) {
+        cli->sendMsg(ResponseCode::CommandSyntaxError, "Missing argument", false);
+        return 0;
+    }
+
+    if(!strcmp(argv[1], "stop")) {
+        rc = sClatdCtrl->stopClatd();
+    } else if (!strcmp(argv[1], "status")) {
+        char *tmp = NULL;
+
+        asprintf(&tmp, "Clatd status: %s", (sClatdCtrl->isClatdStarted() ?
+                                                        "started" : "stopped"));
+        cli->sendMsg(ResponseCode::ClatdStatusResult, tmp, false);
+        free(tmp);
+        return 0;
+    } else if(!strcmp(argv[1], "start")) {
+        if (argc < 3) {
+            cli->sendMsg(ResponseCode::CommandSyntaxError, "Missing argument", false);
+            return 0;
+        }
+        rc = sClatdCtrl->startClatd(argv[2]);
+    } else {
+        cli->sendMsg(ResponseCode::CommandSyntaxError, "Unknown clatd cmd", false);
+        return 0;
+    }
+
+    if (!rc) {
+        cli->sendMsg(ResponseCode::CommandOkay, "Clatd operation succeeded", false);
+    } else {
+        cli->sendMsg(ResponseCode::OperationFailed, "Clatd operation failed", true);
+    }
+
     return 0;
 }

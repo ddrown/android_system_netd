@@ -17,6 +17,7 @@ LOCAL_SRC_FILES:=                                      \
                   SoftapController.cpp                 \
                   TetherController.cpp                 \
                   ThrottleController.cpp               \
+                  ClatdController.cpp                  \
                   logwrapper.c                         \
                   main.cpp                             \
 		  getaddr.c netlink_msg.c setif.c setroute.c netlink_callbacks.c 

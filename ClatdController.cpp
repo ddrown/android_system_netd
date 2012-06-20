@@ -1,0 +1,89 @@
+/*
+ * Copyright (C) 2008 The Android Open Source Project
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+#include <unistd.h>
+#include <errno.h>
+#include <sys/types.h>
+#include <sys/wait.h>
+
+#define LOG_TAG "ClatdController"
+#include <cutils/log.h>
+
+#include "ClatdController.h"
+
+ClatdController::ClatdController() {
+    mClatdPid = 0;
+}
+
+ClatdController::~ClatdController() {
+}
+
+int ClatdController::startClatd(char *interface) {
+    pid_t pid;
+
+    if(mClatdPid != 0) {
+        LOGE("clatd already running");
+        errno = EBUSY;
+        return -1;
+    }
+
+    LOGD("starting clatd");
+
+    if ((pid = fork()) < 0) {
+        LOGE("fork failed (%s)", strerror(errno));
+        return -1;
+    }
+
+    if (!pid) {
+        char **args = (char **)malloc(sizeof(char *) * 4);
+        args[0] = (char *)"/system/bin/clatd";
+        args[1] = (char *)"-i";
+        args[2] = interface;
+        args[3] = NULL;
+
+        if (execv(args[0], args)) {
+            LOGE("execv failed (%s)", strerror(errno));
+        }
+        LOGE("Should never get here!");
+        free(args);
+        return 0;
+    } else {
+        mClatdPid = pid;
+        LOGD("clatd started");
+    }
+
+    return 0;
+}
+
+int ClatdController::stopClatd() {
+    if (mClatdPid == 0) {
+        LOGE("clatd already stopped");
+        return -1;
+    }
+
+    LOGD("Stopping clatd");
+
+    kill(mClatdPid, SIGTERM);
+    waitpid(mClatdPid, NULL, 0); // TODO: what happens on kernel bug?
+    mClatdPid = 0;
+
+    LOGD("clatd stopped");
+
+    return 0;
+}
+
+bool ClatdController::isClatdStarted() {
+    return (mClatdPid == 0 ? false : true);
+}
