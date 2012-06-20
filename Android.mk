@@ -21,6 +21,7 @@ LOCAL_SRC_FILES:=                                      \
                   TetherController.cpp                 \
                   ThrottleController.cpp               \
                   oem_iptables_hook.cpp                \
+                  ClatdController.cpp                  \
                   logwrapper.c                         \
                   main.cpp                             \
 		  getaddr.c netlink_msg.c setif.c setroute.c netlink_callbacks.c 
