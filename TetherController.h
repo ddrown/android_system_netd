@@ -29,8 +29,6 @@ class TetherController {
     NetAddressCollection *mDnsForwarders;
     pid_t                 mDaemonPid;
     int                   mDaemonFd;
-    char                 *mRadvdInterface;
-    pid_t                 mRadvdPid;
 
 public:
     TetherController();
@@ -43,9 +41,6 @@ public:
 
     int stopTethering();
     bool isTetheringStarted();
-
-    int stopRadvd();
-    int startRadvd();
 
     int setDnsForwarders(char **servers, int numServers);
     NetAddressCollection *getDnsForwarders();

@@ -49,6 +49,7 @@ BandwidthController * CommandListener::sBandwidthCtrl = NULL;
 ResolverController *CommandListener::sResolverCtrl = NULL;
 SecondaryTableController *CommandListener::sSecondaryTableCtrl = NULL;
 ClatdController *CommandListener::sClatdCtrl = NULL;
+V6TetherController *CommandListener::sV6TetherCtrl = NULL;
 
 CommandListener::CommandListener() :
                  FrameworkListener("netd") {
@@ -63,6 +64,8 @@ CommandListener::CommandListener() :
     registerCmd(new BandwidthControlCmd());
     registerCmd(new ResolverCmd());
     registerCmd(new ClatdCmd());
+    registerCmd(new Ipv6FwdCmd());
+    registerCmd(new V6TetherCmd());
 
     if (!sSecondaryTableCtrl)
         sSecondaryTableCtrl = new SecondaryTableController();
@@ -82,6 +85,8 @@ CommandListener::CommandListener() :
         sResolverCtrl = new ResolverController();
     if (!sClatdCtrl)
         sClatdCtrl = new ClatdController();
+    if (!sV6TetherCtrl)
+        sV6TetherCtrl = new V6TetherController();
 }
 
 CommandListener::InterfaceCmd::InterfaceCmd() :
@@ -1196,6 +1201,9 @@ int CommandListener::ClatdCmd::runCommand(SocketClient *cli, int argc,
 
     if(!strcmp(argv[1], "stop")) {
         rc = sClatdCtrl->stopClatd();
+        if(rc == 0) {
+          sV6TetherCtrl->disabledForwarding();
+        }
     } else if (!strcmp(argv[1], "status")) {
         char *tmp = NULL;
 
@@ -1210,6 +1218,9 @@ int CommandListener::ClatdCmd::runCommand(SocketClient *cli, int argc,
             return 0;
         }
         rc = sClatdCtrl->startClatd(argv[2]);
+        if(rc == 0) {
+          sV6TetherCtrl->enabledForwarding();
+        }
     } else {
         cli->sendMsg(ResponseCode::CommandSyntaxError, "Unknown clatd cmd", false);
         return 0;
@@ -1219,6 +1230,86 @@ int CommandListener::ClatdCmd::runCommand(SocketClient *cli, int argc,
         cli->sendMsg(ResponseCode::CommandOkay, "Clatd operation succeeded", false);
     } else {
         cli->sendMsg(ResponseCode::OperationFailed, "Clatd operation failed", true);
+    }
+
+    return 0;
+}
+
+CommandListener::Ipv6FwdCmd::Ipv6FwdCmd() : NetdCommand("ipv6fwd") {
+}
+
+int CommandListener::Ipv6FwdCmd::runCommand(SocketClient *cli, int argc,
+                                                            char **argv) {
+    int rc = 0;
+
+    if (argc < 2) {
+        cli->sendMsg(ResponseCode::CommandSyntaxError, "Missing argument", false);
+        return 0;
+    }
+
+    if (!strcmp(argv[1], "status")) {
+        char *tmp = NULL;
+
+        asprintf(&tmp, "IPv6 Forwarding %s", (sV6TetherCtrl->getIPv6FwdEnabled() ?
+                    "enabled" : "disabled"));
+        cli->sendMsg(ResponseCode::IPv6FwdStatusResult, tmp, false);
+        free(tmp);
+        return 0;
+    } else if(!strcmp(argv[1], "enable")) {
+        rc = sV6TetherCtrl->setIPv6FwdEnabled(true);
+    } else if(!strcmp(argv[1], "disable")) {
+        rc = sV6TetherCtrl->setIPv6FwdEnabled(false);
+    } else {
+        cli->sendMsg(ResponseCode::CommandSyntaxError, "Unknown ipv6fwd cmd", false);
+        return 0;
+    }
+
+    if (!rc) {
+        cli->sendMsg(ResponseCode::CommandOkay, "ipv6fwd operation succeeded", false);
+    } else {
+        cli->sendMsg(ResponseCode::OperationFailed, "ipv6fwd operation failed", true);
+    }
+
+    return 0;
+}
+
+CommandListener::V6TetherCmd::V6TetherCmd() : NetdCommand("v6tether") {
+}
+
+int CommandListener::V6TetherCmd::runCommand(SocketClient *cli, int argc,
+                                                            char **argv) {
+    int rc = 0;
+
+    if (argc < 2) {
+        cli->sendMsg(ResponseCode::CommandSyntaxError, "Missing argument", false);
+        return 0;
+    }
+
+    if(!strcmp(argv[1], "stop")) {
+        rc = sV6TetherCtrl->stopV6Tether();
+    } else if (!strcmp(argv[1], "status")) {
+        char *tmp = NULL;
+
+        asprintf(&tmp, "V6Tethering services %s",
+                (sV6TetherCtrl->isV6TetherStarted() ?  "started" : "stopped"));
+        cli->sendMsg(ResponseCode::V6TetherStatusResult, tmp, false);
+        free(tmp);
+        return 0;
+    } else if(!strcmp(argv[1], "start")) {
+        if (argc < 4) {
+            cli->sendMsg(ResponseCode::CommandSyntaxError, "Missing argument", false);
+            return 0;
+        }
+        rc = sV6TetherCtrl->startV6Tether(argv[2],argv[3]);
+    } else {
+        cli->sendMsg(ResponseCode::CommandSyntaxError, "Unknown v6tether cmd", false);
+        return 0;
+    }
+
+    if (!rc) {
+        cli->sendMsg(ResponseCode::CommandOkay, "v6tether operation succeeded", false);
+    } else {
+        cli->sendMsg(ResponseCode::OperationFailed, "v6tether operation failed", true);
     }
 
     return 0;
