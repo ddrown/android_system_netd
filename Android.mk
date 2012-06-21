@@ -19,12 +19,12 @@ LOCAL_SRC_FILES:=                                      \
                   ResolverController.cpp               \
                   SecondaryTableController.cpp         \
                   TetherController.cpp                 \
+                  V6TetherController.cpp               \
                   ThrottleController.cpp               \
                   oem_iptables_hook.cpp                \
                   ClatdController.cpp                  \
                   logwrapper.c                         \
-                  main.cpp                             \
-		  getaddr.c netlink_msg.c setif.c setroute.c netlink_callbacks.c 
+                  main.cpp
 
 
 LOCAL_MODULE:= netd
@@ -35,8 +35,7 @@ LOCAL_C_INCLUDES := $(KERNEL_HEADERS) \
                     external/stlport/stlport \
                     bionic \
                     bionic/libc/private \
-                    $(call include-path-for, libhardware_legacy)/hardware_legacy \
-		    external/libnl-headers
+                    $(call include-path-for, libhardware_legacy)/hardware_legacy
 
 LOCAL_CFLAGS := -Werror=format
 
@@ -49,8 +48,6 @@ else
   LOCAL_SRC_FILES += SoftapController.cpp
 endif
 
-
-LOCAL_STATIC_LIBRARIES := libnl_2
 
 ifneq ($(BOARD_HOSTAPD_DRIVER),)
   LOCAL_CFLAGS += -DHAVE_HOSTAPD

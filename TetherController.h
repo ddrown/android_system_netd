@@ -36,8 +36,6 @@ class TetherController {
     pid_t                 mDaemonPid;
     pid_t                 mDhcpcdPid;
     int                   mDaemonFd;
-    char                 *mRadvdInterface;
-    pid_t                 mRadvdPid;
 
 public:
     TetherController();
