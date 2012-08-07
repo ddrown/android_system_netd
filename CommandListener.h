@@ -29,6 +29,8 @@
 #include "IdletimerController.h"
 #include "ResolverController.h"
 #include "SecondaryTableController.h"
+#include "ClatdController.h"
+#include "V6TetherController.h"
 
 class CommandListener : public FrameworkListener {
     static TetherController *sTetherCtrl;
@@ -40,6 +42,8 @@ class CommandListener : public FrameworkListener {
     static IdletimerController *sIdletimerCtrl;
     static ResolverController *sResolverCtrl;
     static SecondaryTableController *sSecondaryTableCtrl;
+    static ClatdController *sClatdCtrl;
+    static V6TetherController *sV6TetherCtrl;
 
 public:
     CommandListener();
@@ -129,6 +133,27 @@ private:
     public:
         ResolverCmd();
         virtual ~ResolverCmd() {}
+        int runCommand(SocketClient *c, int argc, char ** argv);
+    };
+
+    class ClatdCmd : public NetdCommand {
+    public:
+        ClatdCmd();
+        virtual ~ClatdCmd() {}
+        int runCommand(SocketClient *c, int argc, char ** argv);
+    };
+
+    class Ipv6FwdCmd : public NetdCommand {
+    public:
+        Ipv6FwdCmd();
+        virtual ~Ipv6FwdCmd() {}
+        int runCommand(SocketClient *c, int argc, char ** argv);
+    };
+
+    class V6TetherCmd : public NetdCommand {
+    public:
+        V6TetherCmd();
+        virtual ~V6TetherCmd() {}
         int runCommand(SocketClient *c, int argc, char ** argv);
     };
 };

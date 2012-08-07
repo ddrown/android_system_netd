@@ -18,10 +18,12 @@ LOCAL_SRC_FILES:=                                      \
                   ResolverController.cpp               \
                   SecondaryTableController.cpp         \
                   TetherController.cpp                 \
+                  V6TetherController.cpp               \
                   ThrottleController.cpp               \
                   oem_iptables_hook.cpp                \
+                  ClatdController.cpp                  \
                   logwrapper.c                         \
-                  main.cpp                             \
+                  main.cpp
 
 
 LOCAL_MODULE:= netd
