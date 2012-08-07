@@ -34,15 +34,15 @@ int ClatdController::startClatd(char *interface) {
     pid_t pid;
 
     if(mClatdPid != 0) {
-        LOGE("clatd already running");
+        ALOGE("clatd already running");
         errno = EBUSY;
         return -1;
     }
 
-    LOGD("starting clatd");
+    ALOGD("starting clatd");
 
     if ((pid = fork()) < 0) {
-        LOGE("fork failed (%s)", strerror(errno));
+        ALOGE("fork failed (%s)", strerror(errno));
         return -1;
     }
 
@@ -54,14 +54,14 @@ int ClatdController::startClatd(char *interface) {
         args[3] = NULL;
 
         if (execv(args[0], args)) {
-            LOGE("execv failed (%s)", strerror(errno));
+            ALOGE("execv failed (%s)", strerror(errno));
         }
-        LOGE("Should never get here!");
+        ALOGE("Should never get here!");
         free(args);
         return 0;
     } else {
         mClatdPid = pid;
-        LOGD("clatd started");
+        ALOGD("clatd started");
     }
 
     return 0;
@@ -69,17 +69,17 @@ int ClatdController::startClatd(char *interface) {
 
 int ClatdController::stopClatd() {
     if (mClatdPid == 0) {
-        LOGE("clatd already stopped");
+        ALOGE("clatd already stopped");
         return -1;
     }
 
-    LOGD("Stopping clatd");
+    ALOGD("Stopping clatd");
 
     kill(mClatdPid, SIGTERM);
     waitpid(mClatdPid, NULL, 0); // TODO: what happens on kernel bug?
     mClatdPid = 0;
 
-    LOGD("clatd stopped");
+    ALOGD("clatd stopped");
 
     return 0;
 }
