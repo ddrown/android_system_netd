@@ -63,12 +63,12 @@ int V6TetherController::setIPv6FwdEnabled(bool enable) {
 
     int fd = open("/proc/sys/net/ipv6/conf/all/forwarding", O_WRONLY);
     if (fd < 0) {
-        LOGE("Failed to open forwarding (%s)", strerror(errno));
+        ALOGE("Failed to open forwarding (%s)", strerror(errno));
         return -1;
     }
 
     if (write(fd, (enable ? "1" : "0"), 1) != 1) {
-        LOGE("Failed to write forwarding (%s)", strerror(errno));
+        ALOGE("Failed to write forwarding (%s)", strerror(errno));
         close(fd);
         return -1;
     }
@@ -80,13 +80,13 @@ bool V6TetherController::getIPv6FwdEnabled() {
     int fd = open("/proc/sys/net/ipv6/conf/all/forwarding", O_RDONLY);
 
     if (fd < 0) {
-        LOGE("Failed to open forwarding (%s)", strerror(errno));
+        ALOGE("Failed to open forwarding (%s)", strerror(errno));
         return false;
     }
 
     char enabled;
     if (read(fd, &enabled, 1) != 1) {
-        LOGE("Failed to read forwarding (%s)", strerror(errno));
+        ALOGE("Failed to read forwarding (%s)", strerror(errno));
         close(fd);
         return false;
     }
@@ -101,21 +101,21 @@ int V6TetherController::startV6Tether(char *downstream_interface, char *address)
     int status;
 
     if(mRadvdPid != 0) {
-        LOGE("radvd already running");
+        ALOGE("radvd already running");
         errno = EBUSY;
         return -1;
     }
 
     status = ifc_add_address(downstream_interface, address, 64);
     if(status < 0) {
-        LOGE("adding address to %s failed: %s", downstream_interface, strerror(errno));
+        ALOGE("adding address to %s failed: %s", downstream_interface, strerror(errno));
         errno = -status;
         return -1;
     }
 
     radvd_conf = fopen("/data/misc/radvd/radvd.conf","w");
     if(!radvd_conf) {
-        LOGE("failed to write /data/misc/radvd/radvd.conf (%s)", strerror(errno));
+        ALOGE("failed to write /data/misc/radvd/radvd.conf (%s)", strerror(errno));
         return -1;
     }
     fprintf(radvd_conf,"interface %s\n{\n", downstream_interface);
@@ -127,7 +127,7 @@ int V6TetherController::startV6Tether(char *downstream_interface, char *address)
     unlink("/data/misc/radvd/radvd.pid");
 
     if ((pid = fork()) < 0) {
-        LOGE("fork failed (%s)", strerror(errno));
+        ALOGE("fork failed (%s)", strerror(errno));
         return -1;
     }
 
@@ -142,9 +142,9 @@ int V6TetherController::startV6Tether(char *downstream_interface, char *address)
         args[6] = NULL;
 
         if (execv(args[0], args)) {
-            LOGE("execv failed (%s)", strerror(errno));
+            ALOGE("execv failed (%s)", strerror(errno));
         }
-        LOGE("Should never get here!");
+        ALOGE("Should never get here!");
         free(args);
         exit(0);
     } else {
@@ -156,7 +156,7 @@ int V6TetherController::startV6Tether(char *downstream_interface, char *address)
 
 int V6TetherController::stopV6Tether() {
     if (mRadvdPid == 0) {
-        LOGE("radvd already stopped");
+        ALOGE("radvd already stopped");
         return -1;
     }
 
